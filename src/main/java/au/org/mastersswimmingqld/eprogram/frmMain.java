@@ -1,52 +1,29 @@
 package au.org.mastersswimmingqld.eprogram;
 
-import java.awt.BorderLayout;
-import java.awt.EventQueue;
+import com.jgoodies.forms.layout.ColumnSpec;
+import com.jgoodies.forms.layout.FormLayout;
+import com.jgoodies.forms.layout.FormSpecs;
+import com.jgoodies.forms.layout.RowSpec;
 
-import javax.swing.JFrame;
-import javax.swing.JOptionPane;
-import javax.swing.JPanel;
+import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
-import javax.swing.JLabel;
-import javax.swing.JTextField;
-import javax.swing.JFileChooser;
-
-import com.jgoodies.forms.layout.*;
-
-import javax.swing.JPasswordField;
-import javax.swing.JButton;
-
+import java.awt.*;
+import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.io.File;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
-import java.util.List;
 import java.util.Calendar;
-import java.util.Properties;
+import java.util.List;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.ExecutionException;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import java.awt.event.ActionEvent;
-
-import javax.swing.JSpinner;
-import javax.swing.SpinnerNumberModel;
-
-import java.awt.Font;
 import java.util.prefs.Preferences;
 
-import javax.swing.JComboBox;
-import javax.swing.JProgressBar;
-
-import javax.swing.SwingUtilities;
-import javax.swing.SwingWorker;
-
-import java.awt.*;
-import java.awt.event.*;
-
-import static java.lang.String.*;
+import static java.lang.String.valueOf;
 
 
 public class frmMain extends JFrame {
@@ -63,7 +40,7 @@ public class frmMain extends JFrame {
     private Uploader uploader;
     private MeetList meets;
 	boolean uploaderStatus = false;
-    int defaultSeconds = 60;
+    int defaultSeconds = 120;
 
 	private JPanel contentPane;
 	private JTextField txtUsername;
