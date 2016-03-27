@@ -4,7 +4,6 @@ import java.io.IOException;
 import java.net.URI;
 import java.nio.file.*;
 import java.util.HashMap;
-import java.util.Map;
 import java.util.Properties;
 import java.util.logging.Logger;
 
@@ -23,26 +22,35 @@ import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.http.util.EntityUtils;
 
+import javax.swing.*;
+
+import static java.lang.String.*;
 
 public class Uploader {
 	
 	private static final Logger log = Logger.getLogger( Uploader.class.getName() );
     private Properties properties;
-    //private CloseableHttpClient httpclient;
 	
 	private String filePath;
 	private String username;
 	private String password;
     private int meetId;
+    private JProgressBar progressBar;
+
+    public String getStatus() {
+        return status;
+    }
+
+    private String status;
 
     String tempFilename;
     URI uri;
 	
 	/**
-	 * @param filePath
-	 * @param username
-	 * @param password
-	 */
+     * @param filePath path to the Meet Manager database
+     * @param username MSQ SMS backend username
+     * @param password MSQ SMS backend password
+     */
 	public Uploader(String filePath, String username, String password, int meetId) {
 
         // Load properties
@@ -61,12 +69,12 @@ public class Uploader {
         try {
             Path tempdir = Files.createTempDirectory("tempmm");
             tempdir.toFile().deleteOnExit();
-            tempFilename = String.format("%s/%s.zip", tempdir, meetId);
+            tempFilename = format("%s/%s.zip", tempdir, meetId);
 
-            uri = URI.create(new StringBuilder("jar:file:").append(tempFilename).toString());
+            uri = URI.create("jar:file:" + tempFilename);
 
         } catch (IOException e) {
-            log.severe(String.format("Unable to create temporary directory: %s", e.toString()));
+            log.severe(format("Unable to create temporary directory: %s", e.toString()));
         }
 		
 		log.info("Created uploader object for " + filePath);
@@ -84,12 +92,15 @@ public class Uploader {
 	 */
 	public void setFilePath(String filePath) {
 		this.filePath = filePath;
-		log.info(new StringBuffer("Set file path to ")
-				.append(filePath).append(".").toString());
-	}
+        log.fine("Set file path to " + filePath + ".");
+    }
 
-	/**
-	 * @return the username
+    public void setProgressBar(JProgressBar progressBar) {
+        this.progressBar = progressBar;
+    }
+
+    /**
+     * @return the username
 	 */
 	public String getUsername() {
 		return username;
@@ -100,9 +111,8 @@ public class Uploader {
 	 */
 	public void setUsername(String username) {
 		this.username = username;
-		log.info(new StringBuffer("Set username to ")
-				.append(filePath).append(".").toString());
-	}
+        log.fine("Set username to " + filePath + ".");
+    }
 
 	/**
 	 * @param password the password to set
@@ -151,7 +161,7 @@ public class Uploader {
             FileBody bin = new FileBody(new File(tempFilename));
             StringBody bodyUsername = new StringBody(username, ContentType.MULTIPART_FORM_DATA);
             StringBody bodyPassword = new StringBody(password, ContentType.MULTIPART_FORM_DATA);
-            StringBody bodyMeetId = new StringBody(new String().valueOf(meetId), ContentType.MULTIPART_FORM_DATA);
+            StringBody bodyMeetId = new StringBody(valueOf(meetId), ContentType.MULTIPART_FORM_DATA);
 
             HttpEntity reqEntity = MultipartEntityBuilder.create()
                     .addPart("userfile", bin)
@@ -160,25 +170,24 @@ public class Uploader {
                     .addPart("meetId", bodyMeetId)
                     .build();
 
-            httppost.setEntity(reqEntity);
+            long fileSize = reqEntity.getContentLength();
+            httppost.setEntity(new CountingHttpEntity(reqEntity, progressBar));
 
-            log.info("executing request " + httppost.getRequestLine());
-            CloseableHttpResponse response = httpclient.execute(httppost);
+            log.info("Uploading " + (fileSize / 1024) + "kB.");
 
-            try {
+            try (CloseableHttpResponse response = httpclient.execute(httppost)) {
 
                 log.info("http response: " + response.getStatusLine());
                 HttpEntity resEntity = response.getEntity();
                 if (resEntity != null) {
                     resEntity.getContent();
-                    System.out.println("Response: " + IOUtils.toString(resEntity.getContent()));
+                    status = IOUtils.toString(resEntity.getContent());
+                    log.info("Response: " + status);
                 }
                 EntityUtils.consume(resEntity);
             } catch (IOException e) {
                 log.severe("Unable to upload");
                 return false;
-            } finally {
-                response.close();
             }
         } catch (IOException e) {
             log.severe("Unable to connect");

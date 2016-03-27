@@ -46,6 +46,8 @@ import javax.swing.SwingWorker;
 import java.awt.*;
 import java.awt.event.*;
 
+import static java.lang.String.*;
+
 
 public class frmMain extends JFrame {
 	
@@ -243,8 +245,8 @@ public class frmMain extends JFrame {
 		contentPane.add(lblUploadInterval, "2, 14");
 		
 		spnInterval = new JSpinner();
-        Long seconds = new Long(preferences.get("seconds", new String().valueOf(defaultSeconds)));
-		final SpinnerNumberModel spnIntervalModel = new SpinnerNumberModel(seconds.intValue(), 10, 300, 10);
+        Long seconds = new Long(preferences.get("seconds", valueOf(defaultSeconds)));
+        final SpinnerNumberModel spnIntervalModel = new SpinnerNumberModel(seconds.intValue(), 10, 300, 10);
         interval = spnIntervalModel.getNumber().longValue() * 1000L;
         spnIntervalModel.setValue(seconds.intValue());
 		spnInterval.setModel(spnIntervalModel);
@@ -273,9 +275,9 @@ public class frmMain extends JFrame {
 		txtLastUpload = new JTextField();
 		contentPane.add(txtLastUpload, "4, 20, left, default");
 		txtLastUpload.setColumns(20);
-		
-		lblUploadProgress = new JLabel("Upload Progress:");
-		contentPane.add(lblUploadProgress, "2, 22, right, default");
+
+        lblUploadProgress = new JLabel("Upload Status:");
+        contentPane.add(lblUploadProgress, "2, 22, right, default");
 		
 		progressBar = new JProgressBar();
 		contentPane.add(progressBar, "4, 22");
@@ -284,17 +286,16 @@ public class frmMain extends JFrame {
 		contentPane.add(btnStartStop, "2, 24");
 		btnStartStop.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
-				if (uploaderStatus == false) {
-					log.info("Attempting to start Uploader thread");
-					start();
+                if (!uploaderStatus) {
+                    log.info("Attempting to start uploader.");
+                    start();
 					uploaderStatus = true;
                     btnStartStop.setText("Stop");
 				} else {
-					log.info("Attempting to stop Uploader thread");
-					uploaderStatus = false;
+                    log.info("Attempting to stop uploader");
+                    uploaderStatus = false;
                     btnStartStop.setEnabled(false);
                     btnStartStop.setText("Start");
-                    log.info("BUTTON PRESS STATUS: " + btnStartStop.isEnabled());
                     worker.cancel(true);
 				}
 			}
@@ -340,8 +341,21 @@ public class frmMain extends JFrame {
 		txtLastUpload.setText(dateFormat.format(cal.getTime())); 
 		
 	}
-	
-	public void start() {
+
+    /**
+     * Updates progress bar to show message from web service
+     *
+     * @param status status message retrieved from eProgram upload web service
+     */
+    public void setLastStatus(String status) {
+        progressBar.setStringPainted(true);
+        progressBar.setString(status);
+    }
+
+    /**
+     * Thread worker
+     */
+    public void start() {
 		
 		worker = new SwingWorker<Boolean, Integer>() {
 			
@@ -349,16 +363,20 @@ public class frmMain extends JFrame {
 			protected Boolean doInBackground() throws Exception {
 				
 				// Start the uploader
-				uploader = new Uploader(filePath, txtUsername.getText(),
-						passwordField.getText(), meets.findMeetByName(String.valueOf(cmbMeetName.getSelectedItem())));
+                uploader = new Uploader(filePath,
+                        txtUsername.getText(),
+                        passwordField.getText(),
+                        meets.findMeetByName(valueOf(cmbMeetName.getSelectedItem())));
+                uploader.setProgressBar(progressBar);
 
 				while (isCancelled() == false) {
 					
 					// Attempt to upload and set status if successful
 					if (uploader.upload()) {
 						setLastUpload();
-						log.info("uploaded.");
-					}
+                        setLastStatus(uploader.getStatus());
+                        //log.info("uploaded.");
+                    }
 					
 					try {
                         Thread.sleep(interval);
@@ -366,11 +384,12 @@ public class frmMain extends JFrame {
                         btnStartStop.setEnabled(true);
                         return true;
                     }
-					log.info("slept: " + interval);
-					
-				}
 
-				log.info("exited uploader loop" );
+                    log.fine("slept: " + interval);
+
+                }
+
+                log.fine("exited uploader loop");
                 btnStartStop.setEnabled(true);
 				return true;
 			}
@@ -379,22 +398,17 @@ public class frmMain extends JFrame {
 				boolean status;
 				try {
 					status = get();
-					log.info("exited thread: " + status);
-				} catch (InterruptedException e) {
-					System.out.println(e.toString());
-                    e.printStackTrace();
-				} catch (ExecutionException e) {
-					System.out.println(e.toString());
+                    log.fine("exited thread: " + status);
+                } catch (InterruptedException | ExecutionException e) {
+                    System.out.println(e.toString());
                     e.printStackTrace();
 				} catch (CancellationException e) {
-                    log.info("Ended uploader thread.");
+                    log.info("Uploader stopped.");
                 }
 			}
 			
 			protected void process(List<Integer> chunks) {
 				int mostRecentValue = chunks.get(chunks.size()-1);
-				
-				//txtLastUpload.setText(Integer.toString(mostRecentValue));
 			}
 			
 		};
