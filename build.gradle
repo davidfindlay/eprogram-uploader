@@ -21,6 +21,5 @@ dependencies {
 jar {
     manifest {
         attributes 'Main-Class': 'au.org.mastersswimmingqld.eprogram.frmMain'
-        attributes 'SplashScreen-Image': 'images/splash.gif'
     }
 }
