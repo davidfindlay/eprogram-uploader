@@ -58,8 +58,9 @@ public class frmMain extends JFrame {
     static private Preferences preferences = Preferences.userRoot().node("/au/org/mastersswimmingqld/eprogram/uploader");
 
     SwingWorker<Boolean, Integer> worker;
-	
-	private Uploader uploader;
+    SwingWorker<Boolean, Integer> workerInstant;
+
+    private Uploader uploader;
     private MeetList meets;
 	boolean uploaderStatus = false;
     int defaultSeconds = 60;
@@ -291,20 +292,43 @@ public class frmMain extends JFrame {
                     start();
 					uploaderStatus = true;
                     btnStartStop.setText("Stop");
-				} else {
+
+                    // Disable things that can't be updated during uploader operation
+                    txtUsername.setEnabled(false);
+                    passwordField.setEnabled(false);
+                    txtDataFile.setEnabled(false);
+                    btnChooseFile.setEnabled(false);
+                    cmbMeetName.setEnabled(false);
+                } else {
                     log.info("Attempting to stop uploader");
                     uploaderStatus = false;
                     btnStartStop.setEnabled(false);
                     btnStartStop.setText("Start");
                     worker.cancel(true);
-				}
+                    progressBar.setValue(0);
+                    progressBar.setString("");
+                    progressBar.setStringPainted(false);
+
+                    // Enable things that can't be updated during uploader operation
+                    txtUsername.setEnabled(true);
+                    passwordField.setEnabled(true);
+                    txtDataFile.setEnabled(true);
+                    btnChooseFile.setEnabled(true);
+                    cmbMeetName.setEnabled(true);
+                }
 			}
 		});
 
 		btnUploadNow = new JButton("Upload Now");
 		contentPane.add(btnUploadNow, "4, 24, center, default");
-		
-		btnExit = new JButton("Exit");
+        btnUploadNow.addActionListener(new ActionListener() {
+            public void actionPerformed(ActionEvent e) {
+                log.info("Once of instant upload.");
+                uploadNow();
+            }
+        });
+
+        btnExit = new JButton("Exit");
 		btnExit.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
 
@@ -353,7 +377,7 @@ public class frmMain extends JFrame {
     }
 
     /**
-     * Thread worker
+     * Thread worker for automatic interval uploade
      */
     public void start() {
 		
@@ -416,5 +440,60 @@ public class frmMain extends JFrame {
 		worker.execute();
 		
 	}
+
+    /**
+     * Thread worker for instant upload
+     */
+    public void uploadNow() {
+
+        workerInstant = new SwingWorker<Boolean, Integer>() {
+
+            @Override
+            protected Boolean doInBackground() throws Exception {
+
+                // Start the uploader
+                uploader = new Uploader(filePath,
+                        txtUsername.getText(),
+                        passwordField.getText(),
+                        meets.findMeetByName(valueOf(cmbMeetName.getSelectedItem())));
+                uploader.setProgressBar(progressBar);
+
+                // Attempt to upload and set status if successful
+                if (uploader.upload()) {
+                    setLastUpload();
+                    setLastStatus(uploader.getStatus());
+                    //log.info("uploaded.");
+                }
+
+                try {
+                    Thread.sleep(interval);
+                } catch (InterruptedException e) {
+                    btnStartStop.setEnabled(true);
+                    return true;
+                }
+
+                return true;
+            }
+
+            protected void done() {
+                boolean status;
+                try {
+                    status = get();
+                    log.fine("exited thread: " + status);
+                } catch (InterruptedException | ExecutionException e) {
+                    System.out.println(e.toString());
+                    e.printStackTrace();
+                }
+            }
+
+            protected void process(List<Integer> chunks) {
+                int mostRecentValue = chunks.get(chunks.size() - 1);
+            }
+
+        };
+
+        workerInstant.execute();
+
+    }
 
 }
