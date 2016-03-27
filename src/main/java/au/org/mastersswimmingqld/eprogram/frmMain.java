@@ -1,5 +1,6 @@
 package au.org.mastersswimmingqld.eprogram;
 
+import com.googlecode.vfsjfilechooser2.VFSJFileChooser;
 import com.jgoodies.forms.layout.ColumnSpec;
 import com.jgoodies.forms.layout.FormLayout;
 import com.jgoodies.forms.layout.FormSpecs;
@@ -24,7 +25,6 @@ import java.util.logging.Logger;
 import java.util.prefs.Preferences;
 
 import static java.lang.String.valueOf;
-
 
 public class frmMain extends JFrame {
 	
@@ -94,29 +94,6 @@ public class frmMain extends JFrame {
 	 * Create the frame.
 	 */
 	public frmMain() {
-
-//        setVisible(false);
-//
-//        final SplashScreen splash = SplashScreen.getSplashScreen();
-//        if (splash == null) {
-//            System.out.println("SplashScreen.getSplashScreen() returned null");
-//            return;
-//        }
-//        Graphics2D g = splash.createGraphics();
-//        if (g == null) {
-//            System.out.println("g is null");
-//            return;
-//        }
-//
-//        for(int i=0; i<100; i++) {
-//            renderSplashFrame(g, i);
-//            splash.update();
-//            try {
-//                Thread.sleep(90);
-//            }
-//            catch(InterruptedException e) {
-//            }
-//        }
 
         // Get the default file path
         filePath = preferences.get("filePath", "");
@@ -203,11 +180,11 @@ public class frmMain extends JFrame {
 		btnChooseFile = new JButton("Browse\u2026");
 		btnChooseFile.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent arg0) {
-				JFileChooser fc = new JFileChooser(filePath);
-				int returnVal = fc.showDialog(frmMain.this, "Select MM Database");
-				
-				if (returnVal == JFileChooser.APPROVE_OPTION) {
-		            File file = fc.getSelectedFile();
+                VFSJFileChooser fc = new VFSJFileChooser(filePath);
+                VFSJFileChooser.RETURN_TYPE returnVal = fc.showOpenDialog(frmMain.this);
+
+                if (returnVal == VFSJFileChooser.RETURN_TYPE.APPROVE) {
+                    File file = fc.getSelectedFile();
 		            filePath = file.getAbsolutePath();
 		            txtDataFile.setText(filePath);
 		            //This is where a real application would open the file.
